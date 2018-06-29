@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<launch>
+
+<node name="rfexplorer1" pkg="wifi" type="rfexplorer" respawn="true" ns="rfexplorer1">
+	<param name="port" value="/dev/ttyUSB0"/>
+	<param name="lower_freq_MHz" value="2350"/>
+	<param name="upper_freq_MHz" value="2450"/>
+</node>	
+
+<node name="rfexplorer2" pkg="wifi" type="rfexplorer" respawn="true" ns="rfexplorer2">
+	<param name="port" value="/dev/ttyUSB1"/>
+	<param name="lower_freq_MHz" value="2350"/>
+	<param name="upper_freq_MHz" value="2450"/>
+</node>	
+
+<node name="rfexplorer3" pkg="wifi" type="rfexplorer" respawn="true" ns="rfexplorer3">
+	<param name="port" value="/dev/ttyUSB2"/>
+	<param name="lower_freq_MHz" value="2350"/>
+	<param name="upper_freq_MHz" value="2450"/>
+</node>	
+</launch>
+
