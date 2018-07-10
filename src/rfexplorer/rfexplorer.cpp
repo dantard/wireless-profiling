@@ -29,7 +29,7 @@
  *----------------------------------------------------------------------*/
 
 #include "ros/ros.h"
-#include "wifi/RFExplorer.h"
+#include "wireless_profiling/RFExplorer.h"
 #include "std_msgs/String.h"
 
 #include "../Argon.h"
@@ -156,7 +156,7 @@ double mean(boost::circular_buffer<double> scores){
 }
 
 
-void sfwrite(FILE * f, wifi::RFExplorer & frame, double ts, bool extended){
+void sfwrite(FILE * f, wireless_profiling::RFExplorer & frame, double ts, bool extended){
     fprintf(f,"%8.5f %5d %7.2f %3d %3d %7.2f %7.2f %6.4f %5.1f %7.2f %3d %7.2f %7.2f %7.2f",
             ts,
             frame.header.seq,
@@ -237,7 +237,7 @@ void *rcvThread(void * ) {
             bgn = 2; end = 15;
         }
 
-        wifi::RFExplorer frame;
+        wireless_profiling::RFExplorer frame;
 
         double dbm, now = getTime();
         for (int i = bgn; i < end; i++){
@@ -482,7 +482,7 @@ int main(int argc, char **argv) {
         ros::NodeHandle nh;
 
         //ros::Subscriber sub_command = nh.subscribe("rfexplorer/in/command", 1, ucCommandCallback);
-        pub_data = nh.advertise<wifi::RFExplorer>("rfexplorer/out/data", 1);
+        pub_data = nh.advertise<wireless_profiling::RFExplorer>("rfexplorer/out/data", 1);
 
         //Create receive thread
         pthread_t rcvThrID;

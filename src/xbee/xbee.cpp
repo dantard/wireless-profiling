@@ -27,7 +27,7 @@
  *----------------------------------------------------------------------*/
 
 #include "ros/ros.h"
-#include "wifi/XBee.h"
+#include "wireless_profiling/XBee.h"
 #include "std_msgs/String.h"
 
 #include "../Argon.h"
@@ -194,7 +194,7 @@ double getTime(){
     }
 }
 
-void sfwrite(FILE * f, wifi::XBee & frame){
+void sfwrite(FILE * f, wireless_profiling::XBee & frame){
     fprintf(f,"%8.5f %5d %3d %7.2f %3d %3d %7.2f %7.2f %6.4f %5.1f  %5d %4d %4d %2d",
             getTime(),
             frame.header.seq,
@@ -284,7 +284,7 @@ void *rcvThread(void * ) {
 
         cb.push_back(- xframe->rssi);
 
-        wifi::XBee frame;
+        wireless_profiling::XBee frame;
 
         frame.rssi = - xframe->rssi;
         frame.mean = mean(cb);
@@ -578,7 +578,7 @@ int main(int argc, char **argv) {
         if (use_ros){
 
             ros::NodeHandle nh;
-            pub_data = nh.advertise<wifi::XBee>("xbee/" + std::to_string(rxaddress) + "/out/data", 1);
+            pub_data = nh.advertise<wireless_profiling::XBee>("xbee/" + std::to_string(rxaddress) + "/out/data", 1);
 
             pthread_t thread;
             if (pthread_create(&thread, NULL, rcvThread, NULL) != 0) {

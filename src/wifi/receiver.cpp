@@ -34,7 +34,7 @@
 #include <arpa/inet.h>
 #include "layer_1.h"
 #include <ros/ros.h>
-#include <wifi/Frame.h>
+#include <wireless_profiling/Frame.h>
 #include "common.h"
 #include <pcap.h>
 #include <boost/circular_buffer.hpp>
@@ -132,7 +132,7 @@ int main(int argc, char *argv[]){
         ros::init(argc, argv, "wifi_" + interface, ros::init_options::NoSigintHandler);
         ros::NodeHandle n;
         a.processROS();
-        pub = n.advertise<wifi::Frame> ("out/wifi/", 100);
+        pub = n.advertise<wireless_profiling::Frame> ("out/wifi/", 100);
     }
 
     locate_commands();
@@ -285,7 +285,7 @@ time (3);
         }
         if (use_ros){
             time (4);
-            wifi::Frame p;
+            wireless_profiling::Frame p;
             p.header.stamp = ros::Time::now();
             p.header.seq = idx;
             p.header.frame_id = "wifi";
@@ -336,7 +336,7 @@ time (3);
             if (one_topic_per_sender){
                 if (pubs.find(p.sender) == pubs.end()){
                     ros::NodeHandle n;
-                    pubs[p.sender] = n.advertise<wifi::Frame> ("out/wifi/" + std::to_string(p.sender), 100);
+                    pubs[p.sender] = n.advertise<wireless_profiling::Frame> ("out/wifi/" + std::to_string(p.sender), 100);
                 }
                 pubs[p.sender].publish(p);
             }

@@ -36,8 +36,8 @@ add_dependencies(receiver wifi_generate_messages_cpp radiotap ${catkin_EXPORTED_
 add_custom_command(TARGET receiver
         POST_BUILD
         COMMAND echo "Applying sticky bit to the receiver executable..."
-        COMMAND sudo chown root:root ${CMAKE_BINARY_DIR}/../devel/lib/wifi/receiver
-        COMMAND sudo chmod +s ${CMAKE_BINARY_DIR}/../devel/lib/wifi/receiver
+        COMMAND sudo chown root:root ${CMAKE_BINARY_DIR}/../devel/lib/wireless_profiling/receiver
+        COMMAND sudo chmod +s ${CMAKE_BINARY_DIR}/../devel/lib/wireless_profiling/receiver
 )
 
 add_executable(emitter src/wifi/emitter.cpp src/wifi/common.cpp src/wifi/bridge.cpp src/wifi/layer_1.cpp src/Argon.h)
@@ -46,8 +46,8 @@ add_dependencies(emitter ${catkin_EXPORTED_TARGETS})
 add_custom_command(TARGET emitter
         POST_BUILD
         COMMAND echo "Applying sticky bit to the emitter executable..."
-        COMMAND sudo chown root:root ${CMAKE_BINARY_DIR}/../devel/lib/wifi/emitter
-        COMMAND sudo chmod +s ${CMAKE_BINARY_DIR}/../devel/lib/wifi/emitter
+        COMMAND sudo chown root:root ${CMAKE_BINARY_DIR}/../devel/lib/wireless_profiling/emitter
+        COMMAND sudo chmod +s ${CMAKE_BINARY_DIR}/../devel/lib/wireless_profiling/emitter
 )
 
 add_executable(rfexplorer src/rfexplorer/rfexplorer.cpp)
@@ -56,8 +56,8 @@ add_dependencies(rfexplorer wifi_generate_messages_cpp ${catkin_EXPORTED_TARGETS
 add_custom_command(TARGET rfexplorer
         POST_BUILD
         COMMAND echo "Applying sticky bit to the rfexplorer executable..."
-        COMMAND sudo chown root:root ${CMAKE_BINARY_DIR}/../devel/lib/wifi/rfexplorer
-        COMMAND sudo chmod +s ${CMAKE_BINARY_DIR}/../devel/lib/wifi/rfexplorer
+        COMMAND sudo chown root:root ${CMAKE_BINARY_DIR}/../devel/lib/wireless_profiling/rfexplorer
+        COMMAND sudo chmod +s ${CMAKE_BINARY_DIR}/../devel/lib/wireless_profiling/rfexplorer
 )
 
 add_executable(xbee src/xbee/xbee.cpp)
@@ -66,8 +66,8 @@ add_dependencies(xbee wifi_generate_messages_cpp ${catkin_EXPORTED_TARGETS})
 add_custom_command(TARGET xbee
         POST_BUILD
         COMMAND echo "Applying sticky bit to the xbee executable..."
-        COMMAND sudo chown root:root ${CMAKE_BINARY_DIR}/../devel/lib/wifi/xbee
-        COMMAND sudo chmod +s ${CMAKE_BINARY_DIR}/../devel/lib/wifi/xbee
+        COMMAND sudo chown root:root ${CMAKE_BINARY_DIR}/../devel/lib/wireless_profiling/xbee
+        COMMAND sudo chmod +s ${CMAKE_BINARY_DIR}/../devel/lib/wireless_profiling/xbee
 )
 
 

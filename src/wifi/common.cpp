@@ -34,7 +34,7 @@
  #include <arpa/inet.h>
 #include "layer_1.h"
 #include <ros/ros.h>
-#include <wifi/Frame.h>
+#include <wireless_profiling/Frame.h>
 
 void failure(int i){
     exit(i);
