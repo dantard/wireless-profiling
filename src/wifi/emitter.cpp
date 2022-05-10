@@ -53,7 +53,7 @@ int main(int argc, char *argv[]){
 
     Argon argo;
     std::string ssid, interface, dest_ip, my_ip, dest_mac_str;
-    bool reconfigure, killing, wait_join, udp_on_ap, my_ip_set;
+    bool reconfigure, killing, wait_join, udp_on_ap, my_ip_set, shutup;
     int freq, rate, period, count, size, eid, txpow, sock, protocol = 0x6868, udp;
     struct sockaddr_in serveraddr;
 
@@ -75,6 +75,7 @@ int main(int argc, char *argv[]){
     argo.addString('A',"dest-ip", dest_ip, "192.168.1.1", "Use UDP and send to the specified address");
     argo.addSwitch('U', "udp-on-ap", udp_on_ap, "Shortcut for -u 34567 -y (for using UDP with Access Point)");
     argo.addString('a', "dest-mac", dest_mac_str, "FF:FF:FF:FF:FF:FF","Specify destination MAC (default broadcast)");
+    argo.addSwitch('Q', "quiet", shutup, "Do not print anything");
 
     argo.addIncompatibility('U',"fSkwyru");
     argo.addDependency('A',"uU", Argon::LEFT);
@@ -193,7 +194,10 @@ int main(int argc, char *argv[]){
             len = raw_send(sock, buf, size, dest_mac);
         }
         err += len < 0 ? 1 : 0;
-        fprintf(stderr,"Sent %d frames of %d bytes (errors:%d, saturated:%s)    \r", idx, size, err, getTime() - now > 0.001? "yes" :"no");
+        if (not shutup) {
+            fprintf(stderr, "Sent %d frames of %d bytes (errors:%d, saturated:%s)    \r", idx, size, err,
+                    getTime() - now > 0.001 ? "yes" : "no");
+        }
         usleep(period*1000);
         idx++;
     }

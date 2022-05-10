@@ -109,7 +109,7 @@ int main(int argc, char *argv[]){
     a.addToggle('m', "dont-use-mon", use_mon, true, "Use monitor interface");
     a.addSwitch('o', "only-ds-to-sta", only_ds_to_sta, "Show only frame from DS to STA");
     a.addSwitch('p', "print", print, "Print on screen");
-    a.addSwitch('q', "quiet", quiet, "Don't print anything");
+    a.addSwitch('Q', "quiet", quiet, "Don't print anything");
     a.addInt('r', "raw", protocol, 0x6868, "Show frames with this protocol");
     a.addToggle('R', "dont-use-ros", use_ros, true,"Avoid the need for roscore");
     a.addString('s',"ssid", ssid, "wifi", "Set network SSID");
@@ -118,6 +118,7 @@ int main(int argc, char *argv[]){
     a.addToggle('x', "dont-print-data", has_data, true, "Don't print sender data");
     a.addToggle('y', "dont-reconfigure", reconfigure, true,"Avoid reconfiguring the interface");
     a.addSwitch('Y', "one-topic-per-sender", one_topic_per_sender, "Publish one topic for each sender");
+
 
 
     a.addIncompatibility('F',"iskwmyD");
