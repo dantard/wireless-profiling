@@ -21,5 +21,6 @@ int8 sender
 string addr1
 string addr2
 string addr3
+float32 pdr
 uint8[] data
 

@@ -38,6 +38,8 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
+#include <ros/ros.h>
+#include <std_msgs/Int32.h>
 
 
 double getTime(){
@@ -48,12 +50,18 @@ double getTime(){
 
 }
 
+int64_t get_time_us(){
+    const auto p1 = std::chrono::system_clock::now();
+    int64_t begin = std::chrono::duration_cast<std::chrono::microseconds>(p1.time_since_epoch()).count();
+    return begin;
+}
+
 int main(int argc, char *argv[]){
     char iface[32], buf[2500], dest_mac[6];
 
     Argon argo;
     std::string ssid, interface, dest_ip, my_ip, dest_mac_str;
-    bool reconfigure, killing, wait_join, udp_on_ap, my_ip_set, shutup;
+    bool reconfigure, killing, wait_join, udp_on_ap, my_ip_set, shutup, use_ros;
     int freq, rate, period, count, size, eid, txpow, sock, protocol = 0x6868, udp;
     struct sockaddr_in serveraddr;
 
@@ -76,12 +84,22 @@ int main(int argc, char *argv[]){
     argo.addSwitch('U', "udp-on-ap", udp_on_ap, "Shortcut for -u 34567 -y (for using UDP with Access Point)");
     argo.addString('a', "dest-mac", dest_mac_str, "FF:FF:FF:FF:FF:FF","Specify destination MAC (default broadcast)");
     argo.addSwitch('Q', "quiet", shutup, "Do not print anything");
+    argo.addToggle('W', "use-ros", use_ros, false,"Publish data on ROS");
+
 
     argo.addIncompatibility('U',"fSkwyru");
     argo.addDependency('A',"uU", Argon::LEFT);
     argo.addDependency('i',"xRM", Argon::LEFT);
 
     argo.process(argc, argv);
+
+    ros::Publisher pub;
+    if (use_ros){
+        ros::init(argc, argv, "emitter");
+        ros::NodeHandle n;
+        pub = n.advertise<std_msgs::Int32>("wifi/emitter/pps/", 100);
+    }
+
 
     locate_commands();
     sprintf(iface, "%s",interface.c_str());
@@ -166,7 +184,7 @@ int main(int argc, char *argv[]){
                          &byte[0], &byte[1], &byte[2],
                          &byte[3], &byte[4], &byte[5] ) ){
             for (int i = 0; i<6 ; i++){
-                dest_mac[i] = byte[i];
+                dest_mac[i] = char(byte[i]);
             }
         }else{
             fprintf(stderr,"*** ERROR: incorrect mac address\n");
@@ -180,25 +198,53 @@ int main(int argc, char *argv[]){
         failure(10);
     }
 
-    int idx = 0, err = 0;
-    data_t * data = (data_t * ) buf;
-    data->sender = eid;
+    int64_t start = 0;
+    int idx = 0, err = 0, prev = 0, num = 0, global_prev = 0, pps = 0;
+    auto * data = (data_t * ) buf;
+    data->sender = char(eid);
+
+    char sys_class_filename[256];
+    sprintf(sys_class_filename, "/sys/class/net/%s/statistics/tx_packets", interface.c_str());
 
     while (count == -1 || idx < count){
+
+        if (use_ros and not ros::ok()){
+            break;
+        }
+
         data->serial = idx;
         int len;
-        double now = getTime();
+
         if (udp > 0){
             len = sendto(sock, buf, size, 0, (struct sockaddr*) &serveraddr,  sizeof(serveraddr));
         }else{
             len = raw_send(sock, buf, size, dest_mac);
         }
         err += len < 0 ? 1 : 0;
+
         if (not shutup) {
-            fprintf(stderr, "Sent %d frames of %d bytes (errors:%d, saturated:%s)    \r", idx, size, err,
-                    getTime() - now > 0.001 ? "yes" : "no");
+            FILE *fptr = fopen(sys_class_filename, "r");
+            fscanf(fptr, "%d", &num);
+            if (num != prev) {
+                fprintf(stderr, "Enqueued :%d packets, %d sent per second            \r", idx, pps);
+                prev = num;
+            }
+            fclose(fptr);
+
+            auto now = get_time_us();
+            if (now - start > 1000000){
+                pps = num - global_prev;
+                start = now;
+                global_prev = num;
+            }
         }
-        usleep(period*1000);
+        if (use_ros){
+            std_msgs::Int32 i32;
+            i32.data = pps;
+            pub.publish(i32);
+        }
+
+        usleep(period*1000+1);
         idx++;
     }
     fprintf(stderr,"\n");

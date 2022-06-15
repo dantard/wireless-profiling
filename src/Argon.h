@@ -82,10 +82,10 @@ class Argon{
         bool hasParameter(){
             return has_parameter;
         }
-        virtual std::string getHRValue(){
-        }
-        virtual std::string getHRType(){
-        }
+        virtual std::string getHRValue()=0;
+
+        virtual std::string getHRType()=0;
+
         types_t getType(){
             return type;
         }

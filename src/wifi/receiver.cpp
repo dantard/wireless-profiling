@@ -53,6 +53,12 @@ double getTime(bool use_ros){
     }
 }
 
+int64_t get_time_us(){
+    const auto p1 = std::chrono::system_clock::now();
+    int64_t begin = std::chrono::duration_cast<std::chrono::microseconds>(p1.time_since_epoch()).count();
+    return begin;
+}
+
 #define DEBUG(c) //c
 
 void time(int idx){
@@ -111,15 +117,13 @@ int main(int argc, char *argv[]){
     a.addSwitch('p', "print", print, "Print on screen");
     a.addSwitch('Q', "quiet", quiet, "Don't print anything");
     a.addInt('r', "raw", protocol, 0x6868, "Show frames with this protocol");
-    a.addToggle('R', "dont-use-ros", use_ros, true,"Avoid the need for roscore");
+    a.addToggle('W', "use-ros", use_ros, false,"Publish data using ROS");
     a.addString('s',"ssid", ssid, "wifi", "Set network SSID");
     a.addInt('u', "udp", udp, -1 ,"Show frames with this UDP port");
     a.addSwitch('w', "wait", wait_join, "Wait joning the network before continuing");
     a.addToggle('x', "dont-print-data", has_data, true, "Don't print sender data");
     a.addToggle('y', "dont-reconfigure", reconfigure, true,"Avoid reconfiguring the interface");
     a.addSwitch('Y', "one-topic-per-sender", one_topic_per_sender, "Publish one topic for each sender");
-
-
 
     a.addIncompatibility('F',"iskwmyD");
     a.addIncompatibility('p','H');
@@ -133,7 +137,7 @@ int main(int argc, char *argv[]){
         ros::init(argc, argv, "wifi_" + interface, ros::init_options::NoSigintHandler);
         ros::NodeHandle n;
         a.processROS();
-        pub = n.advertise<wireless_profiling::Frame> ("out/wifi/", 100);
+        pub = n.advertise<wireless_profiling::Frame> ("wifi/receiver/frame", 100);
     }
 
     locate_commands();
@@ -233,6 +237,8 @@ int main(int argc, char *argv[]){
     boost::circular_buffer<double> cb(20);
     boost::circular_buffer<double> rssi(20);
 
+    int pkt_lost = 0, prev_serial;
+
     while (count == -1 || idx < count){
 
         int len;
@@ -260,9 +266,9 @@ int main(int argc, char *argv[]){
         data_t * data;
 
         if (use_mon){
-time (2);
+            time (2);
             rxinfo = raw_parse_radiotap(buf, len);
-time (3);
+            time (3);
             if (rxinfo.error != 0){
                 continue;
             }
@@ -284,12 +290,30 @@ time (3);
                 continue;
             }
         }
+
+        /* PDR COMPUTATION per SECOND */
+        static double pdr = 0;
+        static int64_t prev_ts = 0, interval_received = 0, interval_begin_serial = 0;
+
+        interval_received ++;
+
+        if (get_time_us() - prev_ts > 1000000){
+            int sent = data->serial - interval_begin_serial;
+            pdr = double(interval_received)/double(sent)*100.0;
+
+            interval_received = 0;
+            prev_ts = get_time_us();
+            interval_begin_serial = data->serial;
+        }
+
+        /* PUBLISH ROS Frames */
         if (use_ros){
             time (4);
             wireless_profiling::Frame p;
             p.header.stamp = ros::Time::now();
             p.header.seq = idx;
             p.header.frame_id = "wifi";
+            p.pdr = pdr;
             if (use_mon){
                 p.antenna = rxinfo.antenna;
                 p.channel = rxinfo.channel;
@@ -329,10 +353,7 @@ time (3);
             lost[p.sender] = lost[p.sender] + (p.serial - last_serial[p.sender] - 1);
 
             p.mac_time = 100-100*lost[p.sender]/total[p.sender];
-
-
             last_serial[p.sender] = p.serial;
-
 
             if (one_topic_per_sender){
                 if (pubs.find(p.sender) == pubs.end()){
@@ -345,8 +366,6 @@ time (3);
 
             pub.publish(p);
             time (6);
-
-
         }
 
         if (hr){
@@ -360,7 +379,7 @@ time (3);
                 fprintf(stderr," %s %s %s",rxinfo.addr1,rxinfo.addr2,rxinfo.addr3);
             }
             fprintf(stderr,"\n");
-        }else if (print){
+        } else if (print){
             fprintf(stderr,"%17f %5d %02d %1d %1d %4d %5.1f %4d %3d %1d %8lld",
                     getTime(use_ros), idx, rxinfo.ieee80211_type, rxinfo.ieee80211_to_ds, rxinfo.ieee80211_is_retry, rxinfo.len,
                     rxinfo.rate, rxinfo.channel, rxinfo.rssi, rxinfo.antenna, rxinfo.mac_time);
@@ -371,7 +390,7 @@ time (3);
                 fprintf(stderr," %s %s %s",rxinfo.addr1,rxinfo.addr2,rxinfo.addr3);
             }
             fprintf(stderr,"\n");
-        }else if (!quiet){
+        } else if (!quiet){
             static int rx = 0, missed = 0, last = data->serial - 1, rpt = 0;
             static double last_time = getTime(use_ros);
 
@@ -402,9 +421,8 @@ time (3);
             }
             time (6);
 
-
                 fprintf(stderr,"RSSI:%5.1f | RX:%8d | SER: %8d | Lost:%5d | PDR:%5.1f | RTY:%5d | T:%6.4fms     \r", mrssi/double(rssi.size()), rx++, data->serial,
-                    missed, 100.0 - 100.0*double(missed)/double(rx + missed), rpt, mean/double(cb.size()) );
+                    missed, pdr, rpt, mean/double(cb.size()) );
 
 
             time (7);
