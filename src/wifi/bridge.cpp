@@ -101,7 +101,7 @@ int set_iface_leave(char * interface) {
     return system(cmd);
 }
 int set_iface_param(char * interface, char * essid, int freq, int rate) {
-    sprintf(cmd, "%s dev %s ibss join %s %d fixed-freq mcast-rate %d %s", iw, interface, essid, freq, rate, mute);
+    sprintf(cmd, "%s dev %s ibss join %s %d NOHT fixed-freq mcast-rate %d %s", iw, interface, essid, freq, rate, mute);
     DBG(fprintf(stderr, "%s\n", cmd););
     return system(cmd);
 }

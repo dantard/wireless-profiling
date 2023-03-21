@@ -40,7 +40,8 @@
 #include <netdb.h>
 #include <ros/ros.h>
 #include <std_msgs/Int32.h>
-
+#include <chrono>
+#include <thread>
 
 double getTime(){
 
@@ -55,6 +56,31 @@ int64_t get_time_us(){
     int64_t begin = std::chrono::duration_cast<std::chrono::microseconds>(p1.time_since_epoch()).count();
     return begin;
 }
+
+int64_t start = 0;
+int prev = 0, num = 0, global_prev = 0, pps = 0;
+ros::Publisher pub;
+
+void th_pps(){
+    while (ros::ok()) {
+        auto now = get_time_us();
+        if (now - start > 1000000) {
+            pps = int(1000000 * int64_t(num - global_prev) / (now - start));
+            //fprintf(stderr, "%d %ld %d\n", num - global_prev, now - start, pps);
+            //pps = num - global_prev;
+            start = now;
+            global_prev = num;
+
+            std_msgs::Int32 i32;
+            i32.data = pps;
+            pub.publish(i32);
+
+        }
+        usleep(10);
+    }
+}
+
+
 
 int main(int argc, char *argv[]){
     char iface[32], buf[2500], dest_mac[6];
@@ -93,11 +119,12 @@ int main(int argc, char *argv[]){
 
     argo.process(argc, argv);
 
-    ros::Publisher pub;
+
     if (use_ros){
         ros::init(argc, argv, "emitter");
         ros::NodeHandle n;
         pub = n.advertise<std_msgs::Int32>("wifi/emitter/pps/", 100);
+        auto th = new std::thread(th_pps);
     }
 
 
@@ -199,7 +226,7 @@ int main(int argc, char *argv[]){
     }
 
     int64_t start = 0;
-    int idx = 0, err = 0, prev = 0, num = 0, global_prev = 0, pps = 0;
+    int idx = 0, err = 0;
     auto * data = (data_t * ) buf;
     data->sender = char(eid);
 
@@ -226,23 +253,25 @@ int main(int argc, char *argv[]){
             FILE *fptr = fopen(sys_class_filename, "r");
             fscanf(fptr, "%d", &num);
             if (num != prev) {
-                fprintf(stderr, "Enqueued :%d packets, %d sent per second            \r", idx, pps);
+                fprintf(stderr, "Enqueued :%d packets, %d sent per second          %d %d  \r", idx, pps, num, prev);
                 prev = num;
             }
             fclose(fptr);
 
-            auto now = get_time_us();
+            /*auto now = get_time_us();
             if (now - start > 1000000){
-                pps = num - global_prev;
+                pps = int(1000000*int64_t(num - global_prev)/(now-start));
+                fprintf(stderr,"%d %ld %d\n",num - global_prev, now-start, pps );
+                //pps = num - global_prev;
                 start = now;
                 global_prev = num;
-            }
+            }*/
         }
-        if (use_ros){
+        /*if (use_ros){
             std_msgs::Int32 i32;
             i32.data = pps;
             pub.publish(i32);
-        }
+        }*/
 
         usleep(period*1000+1);
         idx++;

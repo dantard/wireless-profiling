@@ -273,6 +273,11 @@ int main(int argc, char *argv[]){
                 continue;
             }
 
+            /* Frame sent locally by emitter node */
+            if (rxinfo.rssi == 0){
+                continue;
+            }
+
             bool publish = (udp < 0 && protocol < 0 && !beacon);
             publish |= rxinfo.is_udp && rxinfo.udp_port == udp;
             publish |= rxinfo.proto == protocol;
