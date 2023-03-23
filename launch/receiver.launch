@@ -1,0 +1,33 @@
+<launch>
+    <arg name="param_file_name"     doc="name of param file, e.g. rover" default="rover"/>
+    <arg name="param_file_dir"      doc="directory to look for $(arg param_file_name).yaml"
+         default="$(find wireless_profiling)/config/" />
+
+    <arg name="node_name"      doc="name of this node" default="ublox" />
+    <arg name="output"         default="screen" />
+    <arg name="respawn"        default="true" />
+    <arg name="respawn_delay"  default="5" />
+    <arg name="clear_params"   default="true" />
+    <!--
+    <node pkg="wireless_profiling" type="emitter" name="wifi_emitter" output="screen" args="-i wlx00c0ca8f2998 -p 10 -W">
+    </node>
+    -->
+    <node pkg="wireless_profiling" type="receiver" name="wifi_receiver" output="screen" args="-i wlx00c0ca8f2998 -p 0 -W">
+    </node>
+
+    <node pkg="ublox_gps" type="ublox_gps" name="$(arg node_name)" ns="rover"
+          output="$(arg output)"
+          clear_params="$(arg clear_params)"
+          respawn="$(arg respawn)"
+          respawn_delay="$(arg respawn_delay)">
+        <rosparam command="load"
+                  file="$(arg param_file_dir)/$(arg param_file_name).yaml" />
+    </node>
+
+    <!--
+    <node pkg="lora" type="lora_receiver" name="lora_receiver" output="screen" >
+        <param name="verbose" value="false" />
+    </node>
+    -->
+
+</launch>
