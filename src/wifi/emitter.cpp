@@ -58,8 +58,8 @@ int64_t get_time_us(){
 }
 
 int64_t start = 0;
-int prev = 0, num = 0, global_prev = 0, pps = 0;
-ros::Publisher pub;
+int prev = 0, num = 0, global_prev = 0, pps = 0, first_num = -1;
+ros::Publisher pub, pub2;
 
 void th_pps(){
     while (ros::ok()) {
@@ -74,7 +74,6 @@ void th_pps(){
             std_msgs::Int32 i32;
             i32.data = pps;
             pub.publish(i32);
-
         }
         usleep(10);
     }
@@ -123,7 +122,8 @@ int main(int argc, char *argv[]){
     if (use_ros){
         ros::init(argc, argv, "emitter");
         ros::NodeHandle n;
-        pub = n.advertise<std_msgs::Int32>("wifi/emitter/pps/", 100);
+        pub = n.advertise<std_msgs::Int32>("wifi/emitter/pps/", 1);
+        pub2 = n.advertise<std_msgs::Int32>("wifi/emitter/num/", 1);
         auto th = new std::thread(th_pps);
     }
 
@@ -233,47 +233,46 @@ int main(int argc, char *argv[]){
     char sys_class_filename[256];
     sprintf(sys_class_filename, "/sys/class/net/%s/statistics/tx_packets", interface.c_str());
 
-    while (count == -1 || idx < count){
-
-        if (use_ros and not ros::ok()){
+    while (count == -1 || idx < count) {
+        if (use_ros and not ros::ok()) {
             break;
         }
 
         data->serial = idx;
         int len;
 
-        if (udp > 0){
-            len = sendto(sock, buf, size, 0, (struct sockaddr*) &serveraddr,  sizeof(serveraddr));
-        }else{
+        if (udp > 0) {
+            len = sendto(sock, buf, size, 0, (struct sockaddr *) &serveraddr, sizeof(serveraddr));
+        } else {
             len = raw_send(sock, buf, size, dest_mac);
         }
         err += len < 0 ? 1 : 0;
 
+        FILE *fptr = fopen(sys_class_filename, "r");
+        fscanf(fptr, "%d", &num);
+        fclose(fptr);
+
         if (not shutup) {
-            FILE *fptr = fopen(sys_class_filename, "r");
-            fscanf(fptr, "%d", &num);
             if (num != prev) {
-                fprintf(stderr, "Enqueued :%d packets, %d sent per second          %d %d  \r", idx, pps, num, prev);
+                fprintf(stderr, "Enqueued: %d packets, %d sent per second (%d/%d)  \r", idx, pps, num, prev);
                 prev = num;
             }
-            fclose(fptr);
-
-            /*auto now = get_time_us();
-            if (now - start > 1000000){
-                pps = int(1000000*int64_t(num - global_prev)/(now-start));
-                fprintf(stderr,"%d %ld %d\n",num - global_prev, now-start, pps );
-                //pps = num - global_prev;
-                start = now;
-                global_prev = num;
-            }*/
         }
-        /*if (use_ros){
-            std_msgs::Int32 i32;
-            i32.data = pps;
-            pub.publish(i32);
-        }*/
+        if (first_num == -1) {
+            global_prev = num;
+            first_num = num;
+        }
+        if (use_ros) {
 
-        usleep(period*1000+1);
+
+            std_msgs::Int32 i32;
+            i32.data = num - first_num;
+            pub2.publish(i32);
+        }
+
+        if (period > 0) {
+            usleep(period * 1000 + 1);
+        }
         idx++;
     }
     fprintf(stderr,"\n");
