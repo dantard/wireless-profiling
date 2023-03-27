@@ -40,8 +40,42 @@
 #include <boost/circular_buffer.hpp>
 #include <signal.h>
 #include <chrono>
+#include <std_msgs/Int32.h>
+#include <thread>
 
 bool signaled = false, use_ros, quiet = false;
+
+int64_t start = 0;
+int prev = 0, num = 0, global_prev = 0, pps = 0, first_num = -1;
+ros::Publisher pub2;
+
+
+int64_t get_time_us(){
+    const auto p1 = std::chrono::system_clock::now();
+    int64_t begin = std::chrono::duration_cast<std::chrono::microseconds>(p1.time_since_epoch()).count();
+    return begin;
+}
+
+void th_pps(){
+    while (ros::ok()) {
+        auto now = get_time_us();
+        if (now - start > 1000000) {
+            pps = int(1000000 * int64_t(num - global_prev) / (now - start));
+            //fprintf(stderr, "%d %ld %d\n", num - global_prev, now - start, pps);
+            //pps = num - global_prev;
+            start = now;
+            global_prev = num;
+
+            std_msgs::Int32 i32;
+            i32.data = pps;
+            pub2.publish(i32);
+        }
+        usleep(10);
+    }
+}
+
+
+
 
 double getTime(bool use_ros){
     if (use_ros){
@@ -53,11 +87,6 @@ double getTime(bool use_ros){
     }
 }
 
-int64_t get_time_us(){
-    const auto p1 = std::chrono::system_clock::now();
-    int64_t begin = std::chrono::duration_cast<std::chrono::microseconds>(p1.time_since_epoch()).count();
-    return begin;
-}
 
 #define DEBUG(c) //c
 
@@ -137,7 +166,9 @@ int main(int argc, char *argv[]){
         ros::init(argc, argv, "wifi_" + interface, ros::init_options::NoSigintHandler);
         ros::NodeHandle n;
         a.processROS();
-        pub = n.advertise<wireless_profiling::Frame> ("wifi/receiver/frame", 100);
+        pub = n.advertise<wireless_profiling::Frame> ("wifi/receiver/frame", 1);
+        pub2 = n.advertise<std_msgs::Int32> ("wifi/receiver/pps", 1);
+        auto th = new std::thread(th_pps);
     }
 
     locate_commands();
@@ -301,6 +332,7 @@ int main(int argc, char *argv[]){
         static int64_t prev_ts = 0, interval_received = 0, interval_begin_serial = 0;
 
         interval_received ++;
+        num = num + 1;
 
         if (get_time_us() - prev_ts > 1000000){
             int sent = data->serial - interval_begin_serial;
